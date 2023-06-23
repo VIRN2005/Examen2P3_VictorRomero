@@ -10,10 +10,9 @@ using namespace std;
 
 template <typename T>
 class Columna {
-private:
+public:
     vector<T> datosColumna;
 
-public:
     void agregarDato(T values) {
         datosColumna.push_back(values);
     }

@@ -3,8 +3,10 @@
 
 #include <iostream>
 #include <fstream>
-#include <vector>
+#include <sstream>
+#include <iomanip>
 #include <string>
+#include <vector>
 #include "Columna.h"
 
 using namespace std;
@@ -29,25 +31,39 @@ public:
 		notasExamenF = new Columna<float>();
 	}
 
+	//Destructor
+	~Tabla() {
+		delete nombres;
+		delete apellidos;
+		delete edades;
+		delete notasExamenP;
+		delete notasAcumulativo;
+		delete notasExamenF;
+	}
+
 	//Cargar los datos del TXT
 	void cargarArchivoRegistros() {
-		fstream archivo("RegistrosUNITEC.txt");
+		ifstream archivo("RegistrosUNITEC.txt");
 		if (!archivo) {
 			cout << "No se pudo abrir el archivo de registros." << endl;
 			return;
 		}
 
-		string nombre, apellido;
-		int edad;
-		float notaP, notaA, notaF;
+		string linea;
+		while (getline(archivo, linea)) {
+			stringstream ss(linea);
+			string nombre, apellido, edadStr, notaExamenPStr, notaAcumulativoStr, notaExamenFStr;
 
-		while (archivo >> nombre >> apellido >> edad >> notaP >> notaA >> notaF) {
-			nombres->agregarDato(nombre);
-			apellidos->agregarDato(apellido);
-			edades->agregarDato(edad);
-			notasExamenP->agregarDato(notaP);
-			notasAcumulativo->agregarDato(notaA);
-			notasExamenF->agregarDato(notaF);
+			if (getline(ss, nombre, ',') && getline(ss, apellido, ',') && getline(ss, edadStr, ',') &&
+				getline(ss, notaExamenPStr, ',') && getline(ss, notaAcumulativoStr, ',') &&
+				getline(ss, notaExamenFStr, ',')) {
+				nombres->agregarDato(nombre);
+				apellidos->agregarDato(apellido);
+				edades->agregarDato(stoi(edadStr));
+				notasExamenP->agregarDato(stof(notaExamenPStr));
+				notasAcumulativo->agregarDato(stof(notaAcumulativoStr));
+				notasExamenF->agregarDato(stof(notaExamenFStr));
+			}
 		}
 
 		archivo.close();
@@ -60,24 +76,25 @@ public:
 			cout << "No existe la tabla, abra el archivo de registros." << endl;
 			return;
 		}
+		else {
+			cout << "Tabla de Registros:" << endl;
 
-		cout << ">> TABLA DE REGISTROS <<" << endl;
-		cout << "-Nombres: ";
-		nombres->imprimir();
-		apellidos->imprimir();
+			cout << "|   Nombres   |  Apellidos  |  Edades  | Nota P | Nota Acum | Nota F |" << endl;
 
-		cout << "-Edades: ";
-		edades->imprimir();
+			vector<string>& nombresDatos = nombres->obtenerDatos();
+			vector<string>& apellidosDatos = apellidos->obtenerDatos();
+			vector<int>& edadesDatos = edades->obtenerDatos();
+			vector<float>& notasExamenPDatos = notasExamenP->obtenerDatos();
+			vector<float>& notasAcumulativoDatos = notasAcumulativo->obtenerDatos();
+			vector<float>& notasExamenFDatos = notasExamenF->obtenerDatos();
 
-		cout << "-Notas Examen Parcial: ";
-		notasExamenP->imprimir();
-
-		cout << "-Notas Acumulativo: ";
-		notasAcumulativo->imprimir();
-
-		cout << "-Notas Examen Final: ";
-		notasExamenF->imprimir();
-
+			size_t numRegistros = nombresDatos.size();
+			for (size_t i = 0; i < numRegistros; i++) {
+				cout << "| " << left << setw(12) << nombresDatos[i] << "| " << setw(12) << apellidosDatos[i] << "| "
+					<< setw(8) << edadesDatos[i] << " | " << setw(6) << notasExamenPDatos[i] << " | " << setw(10)
+					<< notasAcumulativoDatos[i] << " | " << setw(6) << notasExamenFDatos[i] << " |" << endl;
+			}
+		}
 		//Conste que dijeron que... Como sea pero que Imprima JAJAJA
 	}
 
@@ -89,74 +106,104 @@ public:
 		}
 
 		Columna<string>* nombresCompletos = new Columna<string>();
-		Columna<int>* edadesFusionadas = new Columna<int>();
+		Columna<int>* edadesFusion = new Columna<int>();
 		Columna<float>* notaFinal = new Columna<float>();
 
 		vector<string>& nombresDatos = nombres->obtenerDatos();
 		vector<string>& apellidosDatos = apellidos->obtenerDatos();
 		vector<int>& edadesDatos = edades->obtenerDatos();
+		vector<float>& notasExamenPDatos = notasExamenP->obtenerDatos();
+		vector<float>& notasAcumulativoDatos = notasAcumulativo->obtenerDatos();
 		vector<float>& notasExamenFDatos = notasExamenF->obtenerDatos();
 
-		for (size_t i = 0; i < nombresDatos.size(); i++) {
-			nombresCompletos->agregarDato(nombresDatos[i] + " " + apellidosDatos[i]);
-			edadesFusionadas->agregarDato(edadesDatos[i]);
-			float nota = notasExamenFDatos[i];
-			if (nota < 60) {
-				nota = 0;
-			}
+		size_t numRegistros = nombresDatos.size();
+		for (size_t i = 0; i < numRegistros; i++) {
+			string nombreCompleto = nombresDatos[i] + " " + apellidosDatos[i];
+			nombresCompletos->agregarDato(nombreCompleto);
+
+			int edad = edadesDatos[i];
+			edadesFusion->agregarDato(edad);
+
+			float nota = (notasExamenPDatos[i] + notasAcumulativoDatos[i] + notasExamenFDatos[i]);
 			notaFinal->agregarDato(nota);
 		}
 
-		nombres = nombresCompletos;
-		apellidos = nullptr;
-		edades = edadesFusionadas;
-		notasExamenP = nullptr;
-		notasAcumulativo = nullptr;
-		notasExamenF = notaFinal;
+		cout << "Columnas fusionadas:" << endl;
+		cout << "Nombres Completos:" << endl;
+		nombresCompletos->imprimir();
+		cout << endl;
 
-		cout << "Columnas fusionadas correctamente." << endl;
+		cout << "Edades:" << endl;
+		edadesFusion->imprimir();
+		cout << endl;
+
+		cout << "Nota Final:" << endl;
+		notaFinal->imprimir();
+		cout << endl;
+
+		delete nombresCompletos;
+		delete edadesFusion;
+		delete notaFinal;
 	}
 
 	void guardarFusionColumnas() {
-		//O sea... que si los valores no se cumplen que vuelva a leer
-		if (nombres == nullptr || apellidos != nullptr || notasExamenP != nullptr || notasAcumulativo != nullptr || notasExamenF == nullptr) {
-			cout << "Debe realizar la fusión antes de guardarla." << endl;
+		if (nombres->obtenerDatos().empty()) {
+			cout << "No existe la tabla, abra el archivo de registros." << endl;
 			return;
 		}
 
-		fstream archivo("RegistrosFusionados.txt");
+		Columna<string>* nombresCompletos = new Columna<string>();
+		Columna<int>* edadesFusion = new Columna<int>();
+		Columna<float>* notaFinal = new Columna<float>();
+
+		vector<string>& nombresDatos = nombres->obtenerDatos();
+		vector<string>& apellidosDatos = apellidos->obtenerDatos();
+		vector<int>& edadesDatos = edades->obtenerDatos();
+		vector<float>& notasExamenPDatos = notasExamenP->obtenerDatos();
+		vector<float>& notasAcumulativoDatos = notasAcumulativo->obtenerDatos();
+		vector<float>& notasExamenFDatos = notasExamenF->obtenerDatos();
+
+		size_t numRegistros = nombresDatos.size();
+		for (size_t i = 0; i < numRegistros; i++) {
+			string nombreCompleto = nombresDatos[i] + " " + apellidosDatos[i];
+			nombresCompletos->agregarDato(nombreCompleto);
+
+			int edad = edadesDatos[i];
+			edadesFusion->agregarDato(edad);
+
+			float nota = (notasExamenPDatos[i] + notasAcumulativoDatos[i] + notasExamenFDatos[i]);
+			notaFinal->agregarDato(nota);
+		}
+
+		ofstream archivo("RegistrosFusionados.txt");
 		if (!archivo) {
 			cout << "No se pudo crear el archivo de fusionados." << endl;
 			return;
 		}
 
-		vector<string>& nombresDatos = nombres->obtenerDatos();
-		vector<int>& edadesDatos = edades->obtenerDatos();
-		vector<float>& notaFinalDatos = notasExamenF->obtenerDatos();
-		// A este punto la verdad que todo sirve :)
+		archivo << "NombreCompleto, Edad, NotaFinal, EstadoClase" << endl;
 
-		for (size_t i = 0; i < nombresDatos.size(); i++) {
-			archivo << nombresDatos[i] << ", " << edadesDatos[i] << ", " << notaFinalDatos[i] << ", ";
+		vector<string>& nombresCompletosDatos = nombresCompletos->obtenerDatos();
+		vector<int>& edadesFusionDatos = edadesFusion->obtenerDatos();
+		vector<float>& notaFinalDatos = notaFinal->obtenerDatos();
+
+		for (size_t i = 0; i < numRegistros; i++) {
+			archivo << nombresCompletosDatos[i] << ", " << edadesFusionDatos[i] << ", " << notaFinalDatos[i] << ", ";
 			if (notaFinalDatos[i] < 60) {
 				archivo << "Reprobó";
-			} else {
+			}
+			else {
 				archivo << "Aprobó";
 			}
 			archivo << endl;
 		}
 
 		archivo.close();
-		cout << "Fusión de columnas guardada correctamente en RegistrosFusionados.txt." << endl;
-	}
+		cout << "Columnas fusionadas guardadas en el archivo RegistrosFusionados.txt." << endl;
 
-	//Destructor
-	~Tabla() {
-		delete nombres;
-		delete apellidos;
-		delete edades;
-		delete notasExamenP;
-		delete notasAcumulativo;
-		delete notasExamenF;
+		delete nombresCompletos;
+		delete edadesFusion;
+		delete notaFinal;
 	}
 };
 
